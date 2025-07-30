@@ -1,0 +1,16 @@
+{
+  "name": "uq-solutions-gemini",
+  "version": "1.0.0",
+  "description": "Gemini API endpoint for UQ Solutions Tableau extension",
+  "main": "api/gemini.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "vercel build"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
