@@ -1,17 +1,19 @@
 // api/gemini.js - Vercel serverless function for Gemini API
 export default async function handler(req, res) {
-  // Enable CORS
+  // Set CORS headers for all requests
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Max-Age', '3600');
 
-  // Handle preflight requests
+  // Handle preflight OPTIONS requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS preflight request');
     res.status(200).end();
     return;
   }
 
-  // Only allow POST requests
+  // Only allow POST requests for the actual API call
   if (req.method !== 'POST') {
     return res.status(405).json({ 
       success: false, 
@@ -20,6 +22,8 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('📥 Received request:', req.method);
+    
     const { prompt } = req.body;
 
     if (!prompt) {
