@@ -1,39 +1,57 @@
-// api/gemini.js - Vercel serverless function for Gemini API
 export default async function handler(req, res) {
-  // Set CORS headers for all requests
+  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.setHeader('Access-Control-Max-Age', '3600');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // Handle preflight OPTIONS requests
   if (req.method === 'OPTIONS') {
-    console.log('Handling OPTIONS preflight request');
-    res.status(200).end();
-    return;
+    return res.status(200).end();
   }
 
-  // Only allow POST requests for the actual API call
   if (req.method !== 'POST') {
     return res.status(405).json({ 
       success: false, 
-      error: 'Method not allowed. Use POST.' 
+      error: 'Only POST method allowed. Use POST.' 
     });
   }
 
   try {
-    console.log('📥 Received request:', req.method);
-    
-    const { prompt } = req.body;
+    const { prompt, action, context, program, institution } = req.body;
 
-    if (!prompt) {
+    // Handle different types of requests
+    let finalPrompt;
+    
+    if (action === 'generate_summary') {
+      // This is a trigger call from the button
+      console.log('🚀 Trigger Summary Request:', { program, institution, context });
+      
+      finalPrompt = `Generate a comprehensive AI summary for this program:
+
+Program: ${program || 'Current Program'}
+Institution: ${institution || 'Current Institution'}
+Context: Dashboard trigger at ${new Date().toLocaleString()}
+
+Please provide insights on:
+1. Market demand and workforce trends
+2. Earnings potential and career outcomes  
+3. Program viability and recommendations
+4. Key strengths and potential concerns
+
+Format the response in a clear, professional manner suitable for institutional decision-making.`;
+
+    } else if (prompt) {
+      // This is a regular Gemini API call
+      console.log('📝 Regular Gemini Request, prompt length:', prompt.length);
+      finalPrompt = prompt;
+      
+    } else {
       return res.status(400).json({ 
         success: false, 
-        error: 'Missing prompt in request body' 
+        error: 'Missing prompt or action in request body' 
       });
     }
 
-    console.log('📝 Received prompt length:', prompt.length);
+    console.log('🤖 Calling Gemini API...');
 
     // Gemini API configuration
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -47,7 +65,7 @@ export default async function handler(req, res) {
     const requestBody = {
       contents: [{
         parts: [{
-          text: prompt
+          text: finalPrompt
         }]
       }],
       generationConfig: {
@@ -76,8 +94,6 @@ export default async function handler(req, res) {
       ]
     };
 
-    console.log('🤖 Calling Gemini API...');
-
     // Make request to Gemini API
     const response = await fetch(GEMINI_API_URL, {
       method: 'POST',
@@ -100,12 +116,27 @@ export default async function handler(req, res) {
     if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
       const generatedText = data.candidates[0].content.parts[0].text;
       
-      return res.status(200).json({
-        success: true,
-        content: generatedText,
-        model: 'gemini-1.5-flash-latest',
-        timestamp: new Date().toISOString()
-      });
+      // Different response format based on request type
+      if (action === 'generate_summary') {
+        console.log('✅ Summary generation completed via trigger');
+        return res.status(200).json({
+          success: true,
+          message: 'AI Summary generated successfully',
+          summary: generatedText,
+          program: program,
+          institution: institution,
+          timestamp: new Date().toISOString(),
+          type: 'trigger_response'
+        });
+      } else {
+        // Regular Gemini response format
+        return res.status(200).json({
+          success: true,
+          content: generatedText,
+          model: 'gemini-1.5-flash-latest',
+          timestamp: new Date().toISOString()
+        });
+      }
     } else {
       console.error('❌ Unexpected Gemini response format:', data);
       throw new Error('Unexpected response format from Gemini API');
