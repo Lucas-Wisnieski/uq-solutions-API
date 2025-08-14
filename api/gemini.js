@@ -133,7 +133,7 @@ Format the response in a clear, professional manner suitable for institutional d
         return res.status(200).json({
           success: true,
           content: generatedText,
-          model: 'gemini-1.5-flash-latest',
+          model: 'gemini-2.5-pro-latest',
           timestamp: new Date().toISOString()
         });
       }
