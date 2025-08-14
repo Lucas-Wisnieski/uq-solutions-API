@@ -55,7 +55,7 @@ Format the response in a clear, professional manner suitable for institutional d
 
     // Gemini API configuration
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-latest:generateContent?key=${GEMINI_API_KEY}`;
 
     if (!GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY environment variable not set');
@@ -72,7 +72,7 @@ Format the response in a clear, professional manner suitable for institutional d
         temperature: 0.7,
         topK: 40,
         topP: 0.95,
-        maxOutputTokens: 2048,
+        maxOutputTokens: 8192,
       },
       safetySettings: [
         {
