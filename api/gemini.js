@@ -9,9 +9,9 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ 
-      success: false, 
-      error: 'Only POST method allowed. Use POST.' 
+    return res.status(405).json({
+      success: false,
+      error: 'Only POST method allowed. Use POST.'
     });
   }
 
@@ -45,9 +45,9 @@ Format the response in a clear, professional manner suitable for institutional d
       finalPrompt = prompt;
       
     } else {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Missing prompt or action in request body' 
+      return res.status(400).json({
+        success: false,
+        error: 'Missing prompt or action in request body'
       });
     }
 
@@ -55,7 +55,8 @@ Format the response in a clear, professional manner suitable for institutional d
 
     // Gemini API configuration
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-latest:generateContent?key=${GEMINI_API_KEY}`;
+    // Corrected the model name in the API URL
+    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
 
     if (!GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY environment variable not set');
@@ -133,7 +134,8 @@ Format the response in a clear, professional manner suitable for institutional d
         return res.status(200).json({
           success: true,
           content: generatedText,
-          model: 'gemini-2.5-pro-latest',
+          // Updated model name in the response
+          model: 'gemini-pro',
           timestamp: new Date().toISOString()
         });
       }
