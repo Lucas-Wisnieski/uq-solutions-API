@@ -18,13 +18,9 @@ export default async function handler(req, res) {
   try {
     const { prompt, action, context, program, institution } = req.body;
 
-    // Handle different types of requests
     let finalPrompt;
-    
     if (action === 'generate_summary') {
-      // This is a trigger call from the button
       console.log('🚀 Trigger Summary Request:', { program, institution, context });
-      
       finalPrompt = `Generate a comprehensive AI summary for this program:
 
 Program: ${program || 'Current Program'}
@@ -38,12 +34,9 @@ Please provide insights on:
 4. Key strengths and potential concerns
 
 Format the response in a clear, professional manner suitable for institutional decision-making.`;
-
     } else if (prompt) {
-      // This is a regular Gemini API call
       console.log('📝 Regular Gemini Request, prompt length:', prompt.length);
       finalPrompt = prompt;
-      
     } else {
       return res.status(400).json({
         success: false,
@@ -53,16 +46,16 @@ Format the response in a clear, professional manner suitable for institutional d
 
     console.log('🤖 Calling Gemini API...');
 
-    // Gemini API configuration
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    // Corrected the model name in the API URL
-    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
+    
+    // FIX: Use a current and valid model name for the v1beta API
+    const modelName = 'gemini-1.5-flash-latest';
+    const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
 
     if (!GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY environment variable not set');
     }
 
-    // Prepare the request payload for Gemini API
     const requestBody = {
       contents: [{
         parts: [{
@@ -76,31 +69,16 @@ Format the response in a clear, professional manner suitable for institutional d
         maxOutputTokens: 8192,
       },
       safetySettings: [
-        {
-          category: "HARM_CATEGORY_HARASSMENT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_HATE_SPEECH",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        }
+        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" }
       ]
     };
 
-    // Make request to Gemini API
     const response = await fetch(GEMINI_API_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody)
     });
 
@@ -113,11 +91,9 @@ Format the response in a clear, professional manner suitable for institutional d
     const data = await response.json();
     console.log('✅ Gemini API response received');
 
-    // Extract the generated text from Gemini's response format
     if (data.candidates && data.candidates.length > 0 && data.candidates[0].content) {
       const generatedText = data.candidates[0].content.parts[0].text;
       
-      // Different response format based on request type
       if (action === 'generate_summary') {
         console.log('✅ Summary generation completed via trigger');
         return res.status(200).json({
@@ -130,12 +106,10 @@ Format the response in a clear, professional manner suitable for institutional d
           type: 'trigger_response'
         });
       } else {
-        // Regular Gemini response format
         return res.status(200).json({
           success: true,
           content: generatedText,
-          // Updated model name in the response
-          model: 'gemini-pro',
+          model: modelName,
           timestamp: new Date().toISOString()
         });
       }
@@ -146,7 +120,6 @@ Format the response in a clear, professional manner suitable for institutional d
 
   } catch (error) {
     console.error('❌ Server error:', error);
-    
     return res.status(500).json({
       success: false,
       error: error.message || 'Internal server error',
