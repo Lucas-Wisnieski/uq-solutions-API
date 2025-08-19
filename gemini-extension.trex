@@ -4,7 +4,7 @@
     <default-locale>en_US</default-locale>
     <name resource-id="name"/>
     <description>Gemini AI Institution Analysis</description>
-    <author name="UQ Solutions" email="your-email@example.com" organization="UQ Solutions" website="https://your-website.com"/>
+    <author name="UQ Solutions" email="info@uqsolutions.com" organization="UQ Solutions" website="https://uqsolutions.com"/>
     <min-api-version>1.0</min-api-version>
     <source-location>
       <url>https://lucas-wisnieski.github.io/uq-solutions-gemini/gemini-extension.html</url>
@@ -13,7 +13,7 @@
   </dashboard-extension>
   <resources>
     <resource id="name">
-      <text locale="en_US">Gemini AI Analysis</text>
+      <text locale="en_US">Gemini AI Institution Analysis</text>
     </resource>
   </resources>
 </manifest>
