@@ -7,7 +7,7 @@
     <author name="UQ Solutions" email="your-email@example.com" organization="UQ Solutions" website="https://your-website.com"/>
     <min-api-version>1.0</min-api-version>
     <source-location>
-      <url>https://your-domain.com/gemini-extension.html</url>
+      <url>https://lucas-wisnieski.github.io/uq-solutions-gemini/gemini-extension.html</url>
     </source-location>
     <icon>iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==</icon>
   </dashboard-extension>
