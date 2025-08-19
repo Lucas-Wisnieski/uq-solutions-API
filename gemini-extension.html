@@ -30,6 +30,45 @@
             margin: 0;
             padding: 4px 0 4px 0;
             border-bottom: 1px solid #dee2e6;
+            position: relative;
+        }
+        
+        .prompt-buttons {
+            position: absolute;
+            top: 4px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .prompt-btn {
+            background: #333333;
+            color: white;
+            border: none;
+            padding: 4px;
+            border-radius: 0;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: "Avenir Medium", "Avenir", "Avenir Next", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            height: 39px;
+            width: 188px;
+        }
+        
+        .prompt-btn:hover {
+            background: #024a73;
+            transform: translateY(-1px);
+        }
+        
+        .prompt-btn.active {
+            background: #024a73;
+            color: white;
+        }
+        
+        .prompt-btn.active:hover {
+            background: #1976d2;
         }
         
         .title {
@@ -229,8 +268,13 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1 class="title">Institution Analysis - Gemini AI</h1>
-            <button class="refresh-btn" onclick="generateSummary()">Analyze Institutions</button>
+            <h1 class="title">AI Institution Summary</h1>
+        </div>
+        
+        <div class="prompt-buttons">
+            <button class="prompt-btn active" onclick="selectPrompt('innovations')">Innovations Summary</button>
+            <button class="prompt-btn" onclick="selectPrompt('pricing')">Pricing Summary</button>
+            <button class="prompt-btn" onclick="selectPrompt('curriculum')">Curriculum Summary</button>
         </div>
         
         <div id="loadingIndicator" class="loading" style="display: none;">
@@ -252,7 +296,13 @@
         
         // API Configuration
         const GEMINI_API_URL = 'https://uq-solutions-gemini.vercel.app/api/gemini';
-        const GEMINI_PROMPT_URL = 'https://raw.githubusercontent.com/Lucas-Wisnieski/UQ-Solutions/main/prompts/institution-analysis-prompt.txt';
+        
+        // Prompt URLs for different analysis types
+        const PROMPT_URLS = {
+            innovations: 'https://raw.githubusercontent.com/Lucas-Wisnieski/UQ-Solutions/main/prompts/innovations-summary-prompt.txt',
+            pricing: 'https://raw.githubusercontent.com/Lucas-Wisnieski/UQ-Solutions/main/prompts/pricing-summary-prompt.txt',
+            curriculum: 'https://raw.githubusercontent.com/Lucas-Wisnieski/UQ-Solutions/main/prompts/curriculum-summary-prompt.txt'
+        };
         
         // GitHub Pages URLs for Tableau API
         const GITHUB_API_URLS = [
@@ -262,7 +312,12 @@
 
         // Global state
         let isProcessing = false;
-        let geminiPrompt = null;
+        let geminiPrompts = {
+            innovations: null,
+            pricing: null,
+            curriculum: null
+        };
+        let currentPromptType = 'innovations';
         let lastTriggerCheck = 0;
 
         // Check for triggers from external sources
@@ -380,19 +435,30 @@
         });
 
         function loadPrompt() {
-            console.log('🔍 Loading Gemini prompt from GitHub...');
+            console.log('🔍 Loading all Gemini prompts from GitHub...');
             
-            fetch(GEMINI_PROMPT_URL)
-                .then(r => r.text())
-                .then(function(text) {
-                    geminiPrompt = text.trim();
-                    console.log('✅ Gemini prompt loaded:', geminiPrompt.length, 'characters');
-                    loadTableauAPI();
-                })
-                .catch(function(error) {
-                    console.error('❌ Failed to load prompt:', error);
-                    showError('Failed to load analysis prompt: ' + error.message);
-                });
+            // Load all three prompts
+            Promise.all([
+                fetch(PROMPT_URLS.innovations).then(r => r.text()),
+                fetch(PROMPT_URLS.pricing).then(r => r.text()),
+                fetch(PROMPT_URLS.curriculum).then(r => r.text())
+            ])
+            .then(function([innovationsText, pricingText, curriculumText]) {
+                geminiPrompts.innovations = innovationsText.trim();
+                geminiPrompts.pricing = pricingText.trim();
+                geminiPrompts.curriculum = curriculumText.trim();
+                
+                console.log('✅ All prompts loaded:');
+                console.log('- Innovations:', geminiPrompts.innovations.length, 'characters');
+                console.log('- Pricing:', geminiPrompts.pricing.length, 'characters');
+                console.log('- Curriculum:', geminiPrompts.curriculum.length, 'characters');
+                
+                loadTableauAPI();
+            })
+            .catch(function(error) {
+                console.error('❌ Failed to load prompts:', error);
+                showError('Failed to load analysis prompts: ' + error.message);
+            });
         }
 
         function loadTableauAPI() {
@@ -448,10 +514,10 @@
                     .then(function() {
                         console.log('🎉 Gemini extension initialized!');
                         
-                        // Auto-generate summary after initialization
+                        // Auto-generate innovations summary after initialization
                         setTimeout(function() {
-                            console.log('🔄 Auto-generating Gemini institution analysis...');
-                            generateSummary();
+                            console.log('🔄 Auto-generating Innovations Summary...');
+                            selectPrompt('innovations');
                         }, 200);
                     })
                     .catch(function(error) {
@@ -460,13 +526,38 @@
             }
         }
 
+        function selectPrompt(promptType) {
+            console.log('📋 Selecting prompt type:', promptType);
+            
+            // Update button states
+            document.querySelectorAll('.prompt-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update current prompt type
+            currentPromptType = promptType;
+            
+            // Update loading message
+            const loadingSpan = document.querySelector('#loadingIndicator span');
+            const promptNames = {
+                innovations: 'Innovations Summary',
+                pricing: 'Pricing Summary',
+                curriculum: 'Curriculum Summary'
+            };
+            loadingSpan.textContent = `Generating ${promptNames[promptType]} with Gemini AI...`;
+            
+            // Generate summary with selected prompt
+            generateSummary();
+        }
+
         function generateSummary() {
             if (isProcessing) {
                 return;
             }
             
-            if (!geminiPrompt) {
-                showError('Prompt not loaded. Please refresh the page and try again.');
+            if (!geminiPrompts[currentPromptType]) {
+                showError(`${currentPromptType} prompt not loaded. Please refresh the page and try again.`);
                 return;
             }
             
@@ -680,11 +771,11 @@
             // Remove duplicates and limit to 20
             institutionList = [...new Set(institutionList)].slice(0, 20);
             
-            const prompt = geminiPrompt
+            const prompt = geminiPrompts[currentPromptType]
                 .replace(/\[Program\]/g, data.program)
                 .replace(/\[List of institutions\]/g, institutionList.join(', '));
             
-            console.log('🚀 Sending prompt to Gemini API...');
+            console.log('🚀 Sending', currentPromptType, 'prompt to Gemini API...');
             console.log('📋 Analyzing institutions:', institutionList.length);
 
             return fetch(GEMINI_API_URL, {
