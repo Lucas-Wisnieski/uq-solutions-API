@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI Institution Analysis - Gemini</title>
+    <style>
+        body {
+            font-family: 'Avenir Medium', 'Avenir', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1392px;
+            max-height: 1440px;
+            margin: 0 auto;
+            background: white;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 4px 0 4px 0;
+            border-bottom: 1px solid #dee2e6;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+            margin: 0;
+            font-family: 'Avenir Medium', 'Avenir', sans-serif;
+            text-align: center;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .refresh-btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 4px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: "Avenir Medium", "Avenir", "Avenir Next", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            height: 39px;
+            width: 188px;
+            position: absolute;
+            top: 8px;
+            right: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            background: #f0f0f0;
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border-radius: 6px;
+            color: #667eea;
+            font-weight: 500;
+            font-family: 'Avenir Medium', 'Avenir', sans-serif;
+            border: 1px solid #667eea30;
+            margin: 16px 20px;
+        }
+        
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #667eea30;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .summary-text {
+            background: white;
+            padding: 20px;
+            min-height: 200px;
+            font-size: 18px;
+            line-height: 1.8;
+            color: #2c3e50;
+            white-space: pre-wrap;
+            font-family: 'Avenir Medium', 'Avenir', sans-serif;
+        }
+        
+        .summary-text .subtitle {
+            font-family: 'Avenir Medium', 'Avenir', sans-serif;
+            font-size: 20px;
+            color: #764ba2 !important;
+            margin-bottom: 25px;
+            line-height: 1.6;
+            display: inline-block;
+            font-weight: 600;
+        }
+        
+        .summary-text h1,
+        .summary-text h2 {
+            font-family: 'Avenir Medium', 'Avenir', sans-serif;
+            font-size: 28px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0 15px 0;
+            line-height: 1.3;
+            border-bottom: 2px solid #667eea20;
+            padding-bottom: 8px;
+        }
+        
+        .summary-text h3 {
+            font-family: 'Avenir Medium', 'Avenir', sans-serif;
+            font-size: 24px;
+            font-weight: bold;
+            color: #764ba2;
+            margin: 25px 0 12px 0;
+            line-height: 1.3;
+        }
+        
+        .summary-text p {
+            margin-bottom: 18px;
+            line-height: 1.8;
+        }
+        
+        .summary-text ul {
+            margin: 15px 0;
+            padding-left: 25px;
+        }
+        
+        .summary-text li {
+            margin-bottom: 14px;
+            line-height: 1.8;
+            font-size: 17px;
+        }
+        
+        .summary-text li::marker {
+            color: #667eea;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #ffcdd2;
+            margin: 16px 20px;
+            font-family: 'Avenir Medium', 'Avenir', sans-serif;
+        }
+        
+        .institution-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+            margin: 2px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">Institution Analysis - Gemini AI</h1>
+            <button class="refresh-btn" onclick="generateSummary()">Analyze Institutions</button>
+        </div>
+        
+        <div id="loadingIndicator" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <span>Analyzing institution data with Gemini AI...</span>
+        </div>
+        
+        <div class="summary-container">
+            <div class="summary-text" id="summaryText">
+                Institution analysis will appear here when triggered.
+            </div>
+        </div>
+        
+        <div id="errorMessage" class="error" style="display: none;"></div>
+    </div>
+
+    <script>
+        console.log('🚀 Gemini AI Extension v2025.01.25 loaded');
+        
+        // API Configuration
+        const GEMINI_API_URL = 'https://uq-solutions-gemini.vercel.app/api/gemini';
+        const GEMINI_PROMPT_URL = 'https://raw.githubusercontent.com/Lucas-Wisnieski/UQ-Solutions/main/prompts/institution-analysis-prompt.txt';
+        
+        // GitHub Pages URLs for Tableau API
+        const GITHUB_API_URLS = [
+            'https://lucas-wisnieski.github.io/UQ-Solutions/js/tableau.extensions.1.latest.js',
+            'https://lucas-wisnieski.github.io/UQ-Solutions/js/tableau.extensions.1.latest.min.js'
+        ];
+
+        // Global state
+        let isProcessing = false;
+        let geminiPrompt = null;
+        let lastTriggerCheck = 0;
+
+        // Check for triggers from external sources
+        function checkForTriggers() {
+            // Check for completed summary results
+            try {
+                const storedResult = localStorage.getItem('gemini-summary-result');
+                if (storedResult) {
+                    const resultData = JSON.parse(storedResult);
+                    if (resultData.timestamp > lastTriggerCheck) {
+                        localStorage.removeItem('gemini-summary-result');
+                        lastTriggerCheck = Date.now();
+                        displayExternalSummary(resultData.content);
+                        return;
+                    }
+                }
+            } catch (e) {
+                // Ignore localStorage errors
+            }
+            
+            // Check Tableau settings for completed summary
+            if (typeof tableau !== 'undefined' && tableau.extensions && tableau.extensions.settings) {
+                try {
+                    const summaryContent = tableau.extensions.settings.get('gemini-summary-content');
+                    const summaryTimestamp = tableau.extensions.settings.get('gemini-summary-timestamp');
+                    
+                    if (summaryContent && summaryTimestamp && parseInt(summaryTimestamp) > lastTriggerCheck) {
+                        tableau.extensions.settings.set('gemini-summary-content', '');
+                        tableau.extensions.settings.set('gemini-summary-timestamp', '');
+                        lastTriggerCheck = Date.now();
+                        displayExternalSummary(summaryContent);
+                        return;
+                    }
+                } catch (e) {
+                    // Ignore settings errors
+                }
+            }
+            
+            // Check for trigger signal
+            try {
+                const storedTrigger = localStorage.getItem('gemini-summary-trigger');
+                if (storedTrigger) {
+                    const triggerData = JSON.parse(storedTrigger);
+                    if (triggerData.timestamp > lastTriggerCheck) {
+                        localStorage.removeItem('gemini-summary-trigger');
+                        lastTriggerCheck = Date.now();
+                        generateSummary();
+                        return;
+                    }
+                }
+            } catch (e) {
+                // Ignore localStorage errors
+            }
+        }
+
+        // Start polling for triggers
+        setInterval(checkForTriggers, 500);
+
+        // Message listener for trigger button communication
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'TRIGGER_GEMINI_SUMMARY') {
+                lastTriggerCheck = Date.now();
+                generateSummary();
+            }
+            else if (event.data && event.data.type === 'DISPLAY_GEMINI_SUMMARY') {
+                if (event.data.summary) {
+                    displayExternalSummary(event.data.summary);
+                }
+            }
+        });
+
+        console.log('✅ Gemini extension message listener initialized');
+
+        function displayExternalSummary(summaryText) {
+            console.log('📋 Displaying Gemini AI summary...');
+            
+            let htmlSummary = summaryText
+                .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                .replace(/^\*\*(.*?)\*\*$/gm, '<h2>$1</h2>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>');
+            
+            // Add paragraph tags if not present
+            if (!htmlSummary.includes('<p>')) {
+                htmlSummary = '<p>' + htmlSummary + '</p>';
+            }
+            
+            // Apply Gemini-specific styling
+            let lines = htmlSummary.split('<br>');
+            if (lines.length > 0 && lines[0] && !lines[0].includes('<h2>') && !lines[0].includes('<h3>')) {
+                lines[0] = `<span class="subtitle">${lines[0]}</span>`;
+            }
+            htmlSummary = lines.join('<br>');
+            
+            document.getElementById('summaryText').innerHTML = htmlSummary;
+            document.getElementById('loadingIndicator').style.display = 'none';
+            hideError();
+            
+            console.log('✅ Gemini summary displayed successfully');
+        }
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, setting up Gemini extension...');
+            
+            try {
+                loadPrompt();
+            } catch (error) {
+                console.error('Setup error:', error);
+                showError('Extension setup failed: ' + error.message);
+            }
+        });
+
+        function loadPrompt() {
+            console.log('🔍 Loading Gemini prompt from GitHub...');
+            
+            fetch(GEMINI_PROMPT_URL)
+                .then(r => r.text())
+                .then(function(text) {
+                    geminiPrompt = text.trim();
+                    console.log('✅ Gemini prompt loaded:', geminiPrompt.length, 'characters');
+                    loadTableauAPI();
+                })
+                .catch(function(error) {
+                    console.error('❌ Failed to load prompt:', error);
+                    showError('Failed to load analysis prompt: ' + error.message);
+                });
+        }
+
+        function loadTableauAPI() {
+            console.log('🔍 Loading Tableau API...');
+            
+            if (typeof tableau !== 'undefined' && tableau.extensions) {
+                console.log('✅ Tableau API already available');
+                initializeExtension();
+                return;
+            }
+
+            const urls = [
+                ...GITHUB_API_URLS,
+                'https://raw.githubusercontent.com/tableau/extensions-api/master/lib/tableau.extensions.1.latest.js'
+            ];
+
+            let currentIndex = 0;
+
+            function tryLoad() {
+                if (currentIndex >= urls.length) {
+                    console.log('❌ All API loading attempts failed');
+                    return;
+                }
+
+                const url = urls[currentIndex];
+                console.log(`🔄 Trying: ${url}`);
+
+                const script = document.createElement('script');
+                script.src = url;
+                
+                script.onload = function() {
+                    console.log(`✅ Loaded from: ${url}`);
+                    if (typeof tableau !== 'undefined' && tableau.extensions) {
+                        initializeExtension();
+                    }
+                };
+                
+                script.onerror = function() {
+                    console.log(`❌ Failed: ${url}`);
+                    currentIndex++;
+                    setTimeout(tryLoad, 100);
+                };
+                
+                document.head.appendChild(script);
+            }
+
+            tryLoad();
+        }
+
+        function initializeExtension() {
+            if (tableau && tableau.extensions) {
+                tableau.extensions.initializeAsync()
+                    .then(function() {
+                        console.log('🎉 Gemini extension initialized!');
+                        
+                        // Auto-generate summary after initialization
+                        setTimeout(function() {
+                            console.log('🔄 Auto-generating Gemini institution analysis...');
+                            generateSummary();
+                        }, 200);
+                    })
+                    .catch(function(error) {
+                        console.error('❌ Init failed:', error);
+                    });
+            }
+        }
+
+        function generateSummary() {
+            if (isProcessing) {
+                return;
+            }
+            
+            if (!geminiPrompt) {
+                showError('Prompt not loaded. Please refresh the page and try again.');
+                return;
+            }
+            
+            isProcessing = true;
+            
+            document.getElementById('loadingIndicator').style.display = 'block';
+            hideError();
+            
+            setTimeout(function() {
+                if (isProcessing) {
+                    isProcessing = false;
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                    showError('Process timed out after 45 seconds');
+                }
+            }, 45000);
+            
+            extractInstitutionData()
+                .then(function(data) {
+                    console.log('✅ Institution data extracted:', data);
+                    return callGeminiAPI(data);
+                })
+                .then(function(summary) {
+                    let htmlSummary = formatSummary(summary);
+                    document.getElementById('summaryText').innerHTML = htmlSummary;
+                })
+                .catch(function(error) {
+                    console.error('❌ Failed:', error);
+                    showError('Failed: ' + error.message);
+                })
+                .finally(function() {
+                    isProcessing = false;
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                });
+        }
+
+        function extractInstitutionData() {
+            return new Promise(function(resolve, reject) {
+                if (typeof tableau === 'undefined' || !tableau.extensions) {
+                    reject(new Error('Tableau API not available'));
+                    return;
+                }
+
+                try {
+                    const worksheets = tableau.extensions.dashboardContent.dashboard.worksheets;
+                    console.log(`Found ${worksheets.length} worksheets`);
+                    
+                    // Look for institution worksheets
+                    let secondaryInstitutionsWs = worksheets.find(ws => 
+                        ws.name.toLowerCase().includes('claude') && 
+                        ws.name.toLowerCase().includes('secondary') &&
+                        ws.name.toLowerCase().includes('institution')
+                    );
+                    
+                    let tertiaryInstitutionsWs = worksheets.find(ws => 
+                        ws.name.toLowerCase().includes('claude') && 
+                        ws.name.toLowerCase().includes('tertiary') &&
+                        ws.name.toLowerCase().includes('institution')
+                    );
+
+                    // Fallback to any worksheet with institution in name
+                    if (!secondaryInstitutionsWs && !tertiaryInstitutionsWs) {
+                        const anyInstitutionWs = worksheets.find(ws => 
+                            ws.name.toLowerCase().includes('institution')
+                        );
+                        if (anyInstitutionWs) {
+                            secondaryInstitutionsWs = anyInstitutionWs;
+                        }
+                    }
+
+                    if (!secondaryInstitutionsWs && !tertiaryInstitutionsWs) {
+                        reject(new Error('No institution worksheets found'));
+                        return;
+                    }
+
+                    console.log(`Found secondary institutions: "${secondaryInstitutionsWs?.name || 'None'}"`);
+                    console.log(`Found tertiary institutions: "${tertiaryInstitutionsWs?.name || 'None'}"`);
+
+                    Promise.all([
+                        secondaryInstitutionsWs ? secondaryInstitutionsWs.getSummaryDataAsync() : Promise.resolve(null),
+                        tertiaryInstitutionsWs ? tertiaryInstitutionsWs.getSummaryDataAsync() : Promise.resolve(null)
+                    ])
+                    .then(function([secondaryData, tertiaryData]) {
+                        let secondaryInstitutions = [];
+                        let tertiaryInstitutions = [];
+                        
+                        if (secondaryData) {
+                            console.log(`Got ${secondaryData.data.length} secondary institution rows`);
+                            secondaryInstitutions = extractInstitutionNames(secondaryData);
+                        }
+                        
+                        if (tertiaryData) {
+                            console.log(`Got ${tertiaryData.data.length} tertiary institution rows`);
+                            tertiaryInstitutions = extractInstitutionNames(tertiaryData);
+                        }
+
+                        // Extract program information
+                        let currentProgram = 'Program Analysis';
+                        
+                        if (secondaryData && secondaryData.data.length > 0) {
+                            currentProgram = extractProgramInfo(secondaryData);
+                        } else if (tertiaryData && tertiaryData.data.length > 0) {
+                            currentProgram = extractProgramInfo(tertiaryData);
+                        }
+
+                        resolve({
+                            program: currentProgram,
+                            secondaryInstitutions: secondaryInstitutions,
+                            tertiaryInstitutions: tertiaryInstitutions,
+                            dataSource: 'Institution Data Analysis',
+                            timestamp: new Date().toLocaleString()
+                        });
+                    })
+                    .catch(function(error) {
+                        console.error('Institution data extraction error:', error);
+                        reject(new Error('Institution data extraction failed: ' + error.message));
+                    });
+
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
+        function extractProgramInfo(dataTable) {
+            const columns = dataTable.columns.map(col => col.fieldName);
+            const firstRow = dataTable.data[0];
+            
+            if (!firstRow) return 'Program Analysis';
+            
+            const cipIndex = columns.findIndex(col => 
+                col.toLowerCase().includes('cip') || 
+                col.toLowerCase().includes('award') ||
+                col.toLowerCase().includes('program')
+            );
+            
+            if (cipIndex >= 0 && firstRow[cipIndex]) {
+                const cipValue = (typeof firstRow[cipIndex] === 'object' && firstRow[cipIndex].value !== undefined) 
+                    ? firstRow[cipIndex].value : firstRow[cipIndex];
+                if (cipValue && cipValue !== '%null%') {
+                    console.log('📊 Current program:', cipValue);
+                    return cipValue;
+                }
+            }
+            
+            return 'Program Analysis';
+        }
+
+        function extractInstitutionNames(dataTable) {
+            const columns = dataTable.columns.map(col => col.fieldName);
+            const rows = dataTable.data;
+            
+            console.log('Institution table columns:', columns);
+            
+            let institutionColumnIndex = columns.findIndex(col => 
+                col.toLowerCase() === 'institution'
+            );
+            
+            if (institutionColumnIndex === -1) {
+                institutionColumnIndex = columns.findIndex(col => 
+                    col.toLowerCase().includes('institution') ||
+                    col.toLowerCase().includes('school') ||
+                    col.toLowerCase().includes('university') ||
+                    col.toLowerCase().includes('college')
+                );
+                
+                if (institutionColumnIndex === -1) {
+                    console.log('⚠️ No institution column found');
+                    return [];
+                }
+            }
+            
+            console.log(`Found institution column at index ${institutionColumnIndex}: "${columns[institutionColumnIndex]}"`);
+            
+            const institutions = [];
+            
+            rows.forEach(function(row) {
+                if (row[institutionColumnIndex]) {
+                    let institutionName = row[institutionColumnIndex];
+                    
+                    if (typeof institutionName === 'object' && institutionName._formattedValue) {
+                        institutionName = institutionName._formattedValue;
+                    } else if (typeof institutionName === 'object' && institutionName._value) {
+                        institutionName = institutionName._value;
+                    } else if (typeof institutionName === 'object' && institutionName.value !== undefined) {
+                        institutionName = institutionName.value;
+                    }
+                    
+                    if (institutionName && typeof institutionName === 'string' && institutionName.trim() !== '') {
+                        const cleanName = institutionName.trim();
+                        if (!institutions.includes(cleanName) && !cleanName.includes('|')) {
+                            institutions.push(cleanName);
+                        }
+                    }
+                }
+            });
+            
+            console.log(`Extracted ${institutions.length} unique institutions`);
+            return institutions;
+        }
+
+        function callGeminiAPI(data) {
+            let institutionList = [];
+            
+            if (data.secondaryInstitutions) {
+                institutionList = institutionList.concat(data.secondaryInstitutions);
+            }
+            if (data.tertiaryInstitutions) {
+                institutionList = institutionList.concat(data.tertiaryInstitutions);
+            }
+            
+            // Remove duplicates and limit to 20
+            institutionList = [...new Set(institutionList)].slice(0, 20);
+            
+            const prompt = geminiPrompt
+                .replace(/\[Program\]/g, data.program)
+                .replace(/\[List of institutions\]/g, institutionList.join(', '));
+            
+            console.log('🚀 Sending prompt to Gemini API...');
+            console.log('📋 Analyzing institutions:', institutionList.length);
+
+            return fetch(GEMINI_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: prompt })
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('API error: ' + response.status);
+                return response.json();
+            })
+            .then(function(result) {
+                if (result && result.success) {
+                    return result.content;
+                } else {
+                    throw new Error(result?.error || 'API returned error');
+                }
+            });
+        }
+
+        function formatSummary(summary) {
+            let htmlSummary = summary
+                .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                .replace(/^\*\*(.*?)\*\*$/gm, '<h2>$1</h2>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>');
+            
+            if (!htmlSummary.includes('<p>')) {
+                htmlSummary = '<p>' + htmlSummary + '</p>';
+            }
+            
+            // Apply Gemini-specific subtitle styling
+            let lines = htmlSummary.split('<br>');
+            if (lines.length > 0 && lines[0] && !lines[0].includes('<h2>') && !lines[0].includes('<h3>')) {
+                lines[0] = `<span class="subtitle">${lines[0]}</span>`;
+            }
+            htmlSummary = lines.join('<br>');
+            
+            return htmlSummary;
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
