@@ -714,27 +714,62 @@
         }
 
         function extractSelectedState(dataTable) {
+            console.log('🔍 Debugging state extraction...');
             const columns = dataTable.columns.map(col => col.fieldName);
             const firstRow = dataTable.data[0];
             
-            if (!firstRow) return '';
+            console.log('Available columns:', columns);
+            console.log('First row data:', firstRow);
             
-            // Look for state column
-            const stateIndex = columns.findIndex(col => 
-                col.toLowerCase().includes('state') ||
-                col.toLowerCase().includes('st') ||
-                col.toLowerCase().includes('location')
-            );
+            if (!firstRow) {
+                console.log('❌ No first row found');
+                return '';
+            }
+            
+            // Look for state column with more variations
+            const stateIndex = columns.findIndex(col => {
+                const colLower = col.toLowerCase();
+                return colLower.includes('state') ||
+                       colLower.includes('st ') ||
+                       colLower.includes(' st') ||
+                       colLower === 'st' ||
+                       colLower.includes('location') ||
+                       colLower.includes('region');
+            });
+            
+            console.log('State column index:', stateIndex);
+            if (stateIndex >= 0) {
+                console.log('State column name:', columns[stateIndex]);
+                console.log('State column raw value:', firstRow[stateIndex]);
+            }
             
             if (stateIndex >= 0 && firstRow[stateIndex]) {
-                const stateValue = (typeof firstRow[stateIndex] === 'object' && firstRow[stateIndex].value !== undefined) 
-                    ? firstRow[stateIndex].value : firstRow[stateIndex];
-                if (stateValue && stateValue !== '%null%') {
-                    console.log('📍 Selected state:', stateValue);
-                    return stateValue;
+                let stateValue = firstRow[stateIndex];
+                
+                // Handle different object structures
+                if (typeof stateValue === 'object') {
+                    console.log('State value is object:', stateValue);
+                    if (stateValue._formattedValue) {
+                        stateValue = stateValue._formattedValue;
+                    } else if (stateValue._value) {
+                        stateValue = stateValue._value;
+                    } else if (stateValue.value !== undefined) {
+                        stateValue = stateValue.value;
+                    } else if (stateValue.formattedValue) {
+                        stateValue = stateValue.formattedValue;
+                    }
+                }
+                
+                console.log('Processed state value:', stateValue);
+                
+                if (stateValue && stateValue !== '%null%' && stateValue.toString().trim() !== '') {
+                    const finalState = stateValue.toString().trim();
+                    console.log('✅ Final selected state:', finalState);
+                    return finalState;
                 }
             }
             
+            console.log('❌ No valid state found');
             return '';
         }
 
