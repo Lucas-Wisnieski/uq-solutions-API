@@ -645,15 +645,18 @@
                     .then(function([secondaryData, tertiaryData]) {
                         let secondaryInstitutions = [];
                         let tertiaryInstitutions = [];
+                        let selectedState = '';
                         
                         if (secondaryData) {
                             console.log(`Got ${secondaryData.data.length} secondary institution rows`);
                             secondaryInstitutions = extractInstitutionNames(secondaryData);
+                            if (!selectedState) selectedState = extractSelectedState(secondaryData);
                         }
                         
                         if (tertiaryData) {
                             console.log(`Got ${tertiaryData.data.length} tertiary institution rows`);
                             tertiaryInstitutions = extractInstitutionNames(tertiaryData);
+                            if (!selectedState) selectedState = extractSelectedState(tertiaryData);
                         }
 
                         // Extract program information
@@ -669,6 +672,7 @@
                             program: currentProgram,
                             secondaryInstitutions: secondaryInstitutions,
                             tertiaryInstitutions: tertiaryInstitutions,
+                            selectedState: selectedState,
                             dataSource: 'Institution Data Analysis',
                             timestamp: new Date().toLocaleString()
                         });
@@ -706,6 +710,31 @@
             }
             
             return 'Program Analysis';
+        }
+
+        function extractSelectedState(dataTable) {
+            const columns = dataTable.columns.map(col => col.fieldName);
+            const firstRow = dataTable.data[0];
+            
+            if (!firstRow) return '';
+            
+            // Look for state column
+            const stateIndex = columns.findIndex(col => 
+                col.toLowerCase().includes('state') ||
+                col.toLowerCase().includes('st') ||
+                col.toLowerCase().includes('location')
+            );
+            
+            if (stateIndex >= 0 && firstRow[stateIndex]) {
+                const stateValue = (typeof firstRow[stateIndex] === 'object' && firstRow[stateIndex].value !== undefined) 
+                    ? firstRow[stateIndex].value : firstRow[stateIndex];
+                if (stateValue && stateValue !== '%null%') {
+                    console.log('📍 Selected state:', stateValue);
+                    return stateValue;
+                }
+            }
+            
+            return '';
         }
 
         function extractInstitutionNames(dataTable) {
@@ -776,7 +805,8 @@
             
             const prompt = geminiPrompts[currentPromptType]
                 .replace(/\[Program\]/g, data.program)
-                .replace(/\[List of institutions\]/g, institutionList.join(', '));
+                .replace(/\[List of institutions\]/g, institutionList.join(', '))
+                .replace(/\[Selected Institution State\]/g, data.selectedState || 'Not specified');
             
             console.log('🚀 Sending', currentPromptType, 'prompt to Gemini API...');
             console.log('📋 Analyzing institutions:', institutionList.length);
