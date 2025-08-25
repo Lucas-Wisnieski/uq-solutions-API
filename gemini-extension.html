@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AI Institution Analysis - Gemini</title>
+    <title>AI Summaries - New Programs</title>
     <style>
         body {
             font-family: 'Avenir Medium', 'Avenir', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -25,63 +25,62 @@
         
         .header {
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
             margin: 0;
-            padding: 4px 0 4px 0;
-            position: relative;
-        }
-        
-        .prompt-buttons {
-            position: absolute;
-            top: 4px;
-            right: 4px;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        
-        .summary-container {
-            border-top: 1px solid #dee2e6;
-            margin-top: 95px;
-        }
-        
-        .prompt-btn {
-            background: #333333;
-            color: white;
-            border: none;
-            padding: 4px;
-            border-radius: 0;
-            cursor: pointer;
-            font-weight: bold;
-            font-family: "Avenir Medium", "Avenir", "Avenir Next", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            height: 39px;
-            width: 188px;
-        }
-        
-        .prompt-btn:hover {
-            background: #024a73;
-            transform: translateY(-1px);
-        }
-        
-        .prompt-btn.active {
-            background: #024a73;
-            color: white;
-        }
-        
-        .prompt-btn.active:hover {
-            background: #1976d2;
+            padding: 20px 0 10px 0;
         }
         
         .title {
             font-size: 28px;
             font-weight: 700;
             color: #03304D;
-            margin: 0;
+            margin: 0 0 20px 0;
             font-family: 'Avenir Medium', 'Avenir', sans-serif;
             text-align: center;
+        }
+        
+        .prompt-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 0;
+        }
+        
+        .prompt-btn {
+            background: #eff9fe;
+            color: #03304D;
+            border: 1px solid #03304D;
+            padding: 10px 24px;
+            border-radius: 0;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: "Avenir Medium", "Avenir", "Avenir Next", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            min-width: 150px;
+        }
+        
+        .prompt-btn:hover {
+            background: #d0e8f4;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .prompt-btn.active {
+            background: #024a73;
+            color: white;
+            border-color: #024a73;
+        }
+        
+        .prompt-btn.active:hover {
+            background: #1976d2;
+            border-color: #1976d2;
+        }
+        
+        .summary-container {
+            border-top: 1px solid #dee2e6;
+            margin-top: 0;
         }
         
         .program-title {
@@ -91,29 +90,6 @@
             color: #03304d;
             margin: 20px 0 15px 0;
             text-align: left;
-        }
-        
-        .refresh-btn {
-            background: #333333;
-            color: white;
-            border: none;
-            padding: 4px;
-            border-radius: 0;
-            cursor: pointer;
-            font-weight: bold;
-            font-family: "Avenir Medium", "Avenir", "Avenir Next", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            font-size: 12px;
-            transition: all 0.3s ease;
-            height: 39px;
-            width: 188px;
-            position: absolute;
-            top: 4px;
-            right: 20px;
-        }
-        
-        .refresh-btn:hover {
-            background: #024a73;
-            transform: translateY(-1px);
         }
         
         .loading {
@@ -272,13 +248,13 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1 class="title">AI Institution Summary</h1>
-        </div>
-        
-        <div class="prompt-buttons">
-            <button class="prompt-btn active" onclick="selectPrompt('innovations')">Innovations Summary</button>
-            <button class="prompt-btn" onclick="selectPrompt('pricing')">Pricing Summary</button>
-            <button class="prompt-btn" onclick="selectPrompt('curriculum')">Curriculum Summary</button>
+            <h1 class="title" id="mainTitle">AI Summaries - New Programs</h1>
+            
+            <div class="prompt-buttons">
+                <button class="prompt-btn active" onclick="selectPrompt('innovations', this)">Curricular Innovations</button>
+                <button class="prompt-btn" onclick="selectPrompt('curriculum', this)">Sample Curriculum</button>
+                <button class="prompt-btn" onclick="selectPrompt('pricing', this)">Pricing</button>
+            </div>
         </div>
         
         <div id="loadingIndicator" class="loading" style="display: none;">
@@ -520,8 +496,8 @@
                         
                         // Auto-generate innovations summary after initialization
                         setTimeout(function() {
-                            console.log('🔄 Auto-generating Innovations Summary...');
-                            selectPrompt('innovations');
+                            console.log('🔄 Auto-generating Curricular Innovations Summary...');
+                            selectPrompt('innovations', document.querySelector('.prompt-btn.active'));
                         }, 200);
                     })
                     .catch(function(error) {
@@ -530,26 +506,25 @@
             }
         }
 
-        function selectPrompt(promptType) {
+        function selectPrompt(promptType, buttonElement) {
             console.log('📋 Selecting prompt type:', promptType);
             
             // Update button states
             document.querySelectorAll('.prompt-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            event.target.classList.add('active');
+            buttonElement.classList.add('active');
+            
+            // Update main title with button text
+            const mainTitle = document.getElementById('mainTitle');
+            mainTitle.textContent = buttonElement.textContent + ' - New Programs';
             
             // Update current prompt type
             currentPromptType = promptType;
             
             // Update loading message
             const loadingSpan = document.querySelector('#loadingIndicator span');
-            const promptNames = {
-                innovations: 'Innovations Summary',
-                pricing: 'Pricing Summary',
-                curriculum: 'Curriculum Summary'
-            };
-            loadingSpan.textContent = `Generating ${promptNames[promptType]} with Gemini AI...`;
+            loadingSpan.textContent = `Generating ${buttonElement.textContent} with Gemini AI...`;
             
             // Generate summary with selected prompt
             generateSummary();
