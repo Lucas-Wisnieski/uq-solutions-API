@@ -609,6 +609,9 @@
             document.getElementById('loadingIndicator').style.display = 'block';
             hideError();
             
+            // Clear any cached data to force fresh extraction
+            console.log('🔄 Clearing cached data and extracting fresh data...');
+            
             setTimeout(function() {
                 if (isProcessing) {
                     isProcessing = false;
@@ -629,7 +632,7 @@
             
             dataExtractionPromise
                 .then(function(data) {
-                    console.log('✅ Data extracted:', data);
+                    console.log('✅ Fresh data extracted:', data);
                     
                     // Call appropriate API
                     if (currentPromptType === 'newprogram') {
@@ -666,6 +669,9 @@
                 }
 
                 try {
+                    // Force fresh data extraction every time
+                    console.log('🔄 Extracting fresh Gemini data from Tableau...');
+                    
                     const worksheets = tableau.extensions.dashboardContent.dashboard.worksheets;
                     console.log(`Found ${worksheets.length} worksheets for Gemini`);
                     
@@ -700,6 +706,7 @@
                     console.log(`Found secondary institutions: "${secondaryInstitutionsWs?.name || 'None'}"`);
                     console.log(`Found tertiary institutions: "${tertiaryInstitutionsWs?.name || 'None'}"`);
 
+                    // Always get fresh data with getSummaryDataAsync
                     Promise.all([
                         secondaryInstitutionsWs ? secondaryInstitutionsWs.getSummaryDataAsync() : Promise.resolve(null),
                         tertiaryInstitutionsWs ? tertiaryInstitutionsWs.getSummaryDataAsync() : Promise.resolve(null)
@@ -710,13 +717,13 @@
                         let selectedState = '';
                         
                         if (secondaryData) {
-                            console.log(`Got ${secondaryData.data.length} secondary institution rows`);
+                            console.log(`Got ${secondaryData.data.length} secondary institution rows (fresh data)`);
                             secondaryInstitutions = extractInstitutionNames(secondaryData);
                             if (!selectedState) selectedState = extractSelectedState(secondaryData);
                         }
                         
                         if (tertiaryData) {
-                            console.log(`Got ${tertiaryData.data.length} tertiary institution rows`);
+                            console.log(`Got ${tertiaryData.data.length} tertiary institution rows (fresh data)`);
                             tertiaryInstitutions = extractInstitutionNames(tertiaryData);
                             if (!selectedState) selectedState = extractSelectedState(tertiaryData);
                         }
@@ -759,6 +766,9 @@
                 }
 
                 try {
+                    // Force fresh data extraction every time
+                    console.log('🔄 Extracting fresh Claude data from Tableau...');
+                    
                     const worksheets = tableau.extensions.dashboardContent.dashboard.worksheets;
                     console.log(`Found ${worksheets.length} worksheets for Claude`);
                     
@@ -801,12 +811,14 @@
                     
                     console.log(`Using metrics worksheet: "${metricsWs.name}"`);
                     
+                    // Always get fresh data with getSummaryDataAsync
                     Promise.all([
                         metricsWs.getSummaryDataAsync(),
                         secondaryInstitutionsWs ? secondaryInstitutionsWs.getSummaryDataAsync() : Promise.resolve(null),
                         tertiaryInstitutionsWs ? tertiaryInstitutionsWs.getSummaryDataAsync() : Promise.resolve(null)
                     ])
                     .then(function([metricsData, secondaryData, tertiaryData]) {
+                        console.log('📊 Fresh metrics data received');
                         const processedData = processMetricsData(metricsData);
                         
                         if (secondaryData) {
