@@ -45,6 +45,7 @@
             justify-content: center;
             gap: 15px;
             margin-bottom: 0;
+            flex-wrap: wrap;
         }
         
         .prompt-btn {
@@ -251,7 +252,9 @@
             <h1 class="title" id="mainTitle">AI Summaries - New Programs</h1>
             
             <div class="prompt-buttons">
-                <button class="prompt-btn active" onclick="selectPrompt('innovations', this)">Curricular Innovations</button>
+                <button class="prompt-btn active" onclick="selectPrompt('newprogram', this)">New Program Summary</button>
+                <button class="prompt-btn" onclick="selectPrompt('top20', this)">Top 20 New Programs</button>
+                <button class="prompt-btn" onclick="selectPrompt('innovations', this)">Curricular Innovations</button>
                 <button class="prompt-btn" onclick="selectPrompt('curriculum', this)">Sample Curriculum</button>
                 <button class="prompt-btn" onclick="selectPrompt('pricing', this)">Pricing</button>
             </div>
@@ -259,12 +262,12 @@
         
         <div id="loadingIndicator" class="loading" style="display: none;">
             <div class="spinner"></div>
-            <span>Analyzing institution data with Gemini AI...</span>
+            <span>Analyzing data with AI...</span>
         </div>
         
         <div class="summary-container">
             <div class="summary-text" id="summaryText">
-                Institution analysis will appear here when triggered.
+                Analysis will appear here when triggered.
             </div>
         </div>
         
@@ -272,16 +275,18 @@
     </div>
 
     <script>
-        console.log('🚀 Gemini AI Extension v2025.01.25 loaded');
+        console.log('🚀 AI Extension v2025.01.25 loaded');
         
         // API Configuration
         const GEMINI_API_URL = 'https://uq-solutions-gemini.vercel.app/api/gemini';
+        const CLAUDE_API_URL = 'https://uq-solutions.vercel.app/api/claude';
         
         // Prompt URLs for different analysis types
         const PROMPT_URLS = {
             innovations: 'https://raw.githubusercontent.com/Lucas-Wisnieski/UQ-Solutions/main/prompts/innovations-summary-prompt.txt',
             pricing: 'https://raw.githubusercontent.com/Lucas-Wisnieski/UQ-Solutions/main/prompts/pricing-summary-prompt.txt',
-            curriculum: 'https://raw.githubusercontent.com/Lucas-Wisnieski/UQ-Solutions/main/prompts/curriculum-summary-prompt.txt'
+            curriculum: 'https://raw.githubusercontent.com/Lucas-Wisnieski/UQ-Solutions/main/prompts/curriculum-summary-prompt.txt',
+            newprogram: 'https://raw.githubusercontent.com/Lucas-Wisnieski/UQ-Solutions/main/prompts/ai-analysis-prompt.txt'
         };
         
         // GitHub Pages URLs for Tableau API
@@ -292,25 +297,38 @@
 
         // Global state
         let isProcessing = false;
-        let geminiPrompts = {
+        let prompts = {
             innovations: null,
             pricing: null,
-            curriculum: null
+            curriculum: null,
+            newprogram: null,
+            top20: null
         };
-        let currentPromptType = 'innovations';
+        let currentPromptType = 'newprogram';
         let lastTriggerCheck = 0;
 
         // Check for triggers from external sources
         function checkForTriggers() {
-            // Check for completed summary results
+            // Check for completed summary results (both Gemini and Claude)
             try {
-                const storedResult = localStorage.getItem('gemini-summary-result');
-                if (storedResult) {
-                    const resultData = JSON.parse(storedResult);
+                const geminiResult = localStorage.getItem('gemini-summary-result');
+                if (geminiResult) {
+                    const resultData = JSON.parse(geminiResult);
                     if (resultData.timestamp > lastTriggerCheck) {
                         localStorage.removeItem('gemini-summary-result');
                         lastTriggerCheck = Date.now();
-                        displayExternalSummary(resultData.content);
+                        displayExternalSummary(resultData.content, 'gemini');
+                        return;
+                    }
+                }
+                
+                const claudeResult = localStorage.getItem('claude-summary-result');
+                if (claudeResult) {
+                    const resultData = JSON.parse(claudeResult);
+                    if (resultData.timestamp > lastTriggerCheck) {
+                        localStorage.removeItem('claude-summary-result');
+                        lastTriggerCheck = Date.now();
+                        displayExternalSummary(resultData.content, 'claude');
                         return;
                     }
                 }
@@ -321,14 +339,25 @@
             // Check Tableau settings for completed summary
             if (typeof tableau !== 'undefined' && tableau.extensions && tableau.extensions.settings) {
                 try {
-                    const summaryContent = tableau.extensions.settings.get('gemini-summary-content');
-                    const summaryTimestamp = tableau.extensions.settings.get('gemini-summary-timestamp');
+                    const geminisummaryContent = tableau.extensions.settings.get('gemini-summary-content');
+                    const geminisummaryTimestamp = tableau.extensions.settings.get('gemini-summary-timestamp');
                     
-                    if (summaryContent && summaryTimestamp && parseInt(summaryTimestamp) > lastTriggerCheck) {
+                    if (geminisummaryContent && geminisummaryTimestamp && parseInt(geminisummaryTimestamp) > lastTriggerCheck) {
                         tableau.extensions.settings.set('gemini-summary-content', '');
                         tableau.extensions.settings.set('gemini-summary-timestamp', '');
                         lastTriggerCheck = Date.now();
-                        displayExternalSummary(summaryContent);
+                        displayExternalSummary(geminisummaryContent, 'gemini');
+                        return;
+                    }
+                    
+                    const claudeSummaryContent = tableau.extensions.settings.get('claude-summary-content');
+                    const claudeSummaryTimestamp = tableau.extensions.settings.get('claude-summary-timestamp');
+                    
+                    if (claudeSummaryContent && claudeSummaryTimestamp && parseInt(claudeSummaryTimestamp) > lastTriggerCheck) {
+                        tableau.extensions.settings.set('claude-summary-content', '');
+                        tableau.extensions.settings.set('claude-summary-timestamp', '');
+                        lastTriggerCheck = Date.now();
+                        displayExternalSummary(claudeSummaryContent, 'claude');
                         return;
                     }
                 } catch (e) {
@@ -336,14 +365,26 @@
                 }
             }
             
-            // Check for trigger signal
+            // Check for trigger signals
             try {
-                const storedTrigger = localStorage.getItem('gemini-summary-trigger');
-                if (storedTrigger) {
-                    const triggerData = JSON.parse(storedTrigger);
+                const geminiTrigger = localStorage.getItem('gemini-summary-trigger');
+                if (geminiTrigger) {
+                    const triggerData = JSON.parse(geminiTrigger);
                     if (triggerData.timestamp > lastTriggerCheck) {
                         localStorage.removeItem('gemini-summary-trigger');
                         lastTriggerCheck = Date.now();
+                        generateSummary();
+                        return;
+                    }
+                }
+                
+                const claudeTrigger = localStorage.getItem('claude-summary-trigger');
+                if (claudeTrigger) {
+                    const triggerData = JSON.parse(claudeTrigger);
+                    if (triggerData.timestamp > lastTriggerCheck) {
+                        localStorage.removeItem('claude-summary-trigger');
+                        lastTriggerCheck = Date.now();
+                        currentPromptType = 'newprogram';
                         generateSummary();
                         return;
                     }
@@ -362,76 +403,76 @@
                 lastTriggerCheck = Date.now();
                 generateSummary();
             }
+            else if (event.data && event.data.type === 'TRIGGER_CLAUDE_SUMMARY') {
+                lastTriggerCheck = Date.now();
+                currentPromptType = 'newprogram';
+                generateSummary();
+            }
             else if (event.data && event.data.type === 'DISPLAY_GEMINI_SUMMARY') {
                 if (event.data.summary) {
-                    displayExternalSummary(event.data.summary);
+                    displayExternalSummary(event.data.summary, 'gemini');
+                }
+            }
+            else if (event.data && event.data.type === 'DISPLAY_CLAUDE_SUMMARY') {
+                if (event.data.summary) {
+                    displayExternalSummary(event.data.summary, 'claude');
                 }
             }
         });
 
-        console.log('✅ Gemini extension message listener initialized');
+        console.log('✅ AI extension message listener initialized');
 
-        function displayExternalSummary(summaryText) {
-            console.log('📋 Displaying Gemini AI summary...');
+        function displayExternalSummary(summaryText, source) {
+            console.log(`📋 Displaying ${source} AI summary...`);
             
-            let htmlSummary = summaryText
-                .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-                .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-                .replace(/^\*\*(.*?)\*\*$/gm, '<h2>$1</h2>')
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                .replace(/\n\n/g, '</p><p>')
-                .replace(/\n/g, '<br>');
+            let htmlSummary;
             
-            // Add paragraph tags if not present
-            if (!htmlSummary.includes('<p>')) {
-                htmlSummary = '<p>' + htmlSummary + '</p>';
+            if (source === 'claude') {
+                htmlSummary = formatClaudeSummary(summaryText);
+            } else {
+                htmlSummary = formatGeminiSummary(summaryText);
             }
-            
-            // Apply Gemini-specific styling
-            let lines = htmlSummary.split('<br>');
-            if (lines.length > 0 && lines[0] && !lines[0].includes('<h2>') && !lines[0].includes('<h3>')) {
-                lines[0] = `<span class="subtitle">${lines[0]}</span>`;
-            }
-            htmlSummary = lines.join('<br>');
             
             document.getElementById('summaryText').innerHTML = htmlSummary;
             document.getElementById('loadingIndicator').style.display = 'none';
             hideError();
             
-            console.log('✅ Gemini summary displayed successfully');
+            console.log(`✅ ${source} summary displayed successfully`);
         }
 
         // Initialize when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, setting up Gemini extension...');
+            console.log('DOM loaded, setting up AI extension...');
             
             try {
-                loadPrompt();
+                loadPrompts();
             } catch (error) {
                 console.error('Setup error:', error);
                 showError('Extension setup failed: ' + error.message);
             }
         });
 
-        function loadPrompt() {
-            console.log('🔍 Loading all Gemini prompts from GitHub...');
+        function loadPrompts() {
+            console.log('🔍 Loading all AI prompts from GitHub...');
             
-            // Load all three prompts
+            // Load all prompts
             Promise.all([
                 fetch(PROMPT_URLS.innovations).then(r => r.text()),
                 fetch(PROMPT_URLS.pricing).then(r => r.text()),
-                fetch(PROMPT_URLS.curriculum).then(r => r.text())
+                fetch(PROMPT_URLS.curriculum).then(r => r.text()),
+                fetch(PROMPT_URLS.newprogram).then(r => r.text())
             ])
-            .then(function([innovationsText, pricingText, curriculumText]) {
-                geminiPrompts.innovations = innovationsText.trim();
-                geminiPrompts.pricing = pricingText.trim();
-                geminiPrompts.curriculum = curriculumText.trim();
+            .then(function([innovationsText, pricingText, curriculumText, newprogramText]) {
+                prompts.innovations = innovationsText.trim();
+                prompts.pricing = pricingText.trim();
+                prompts.curriculum = curriculumText.trim();
+                prompts.newprogram = newprogramText.trim();
                 
                 console.log('✅ All prompts loaded:');
-                console.log('- Innovations:', geminiPrompts.innovations.length, 'characters');
-                console.log('- Pricing:', geminiPrompts.pricing.length, 'characters');
-                console.log('- Curriculum:', geminiPrompts.curriculum.length, 'characters');
+                console.log('- Innovations:', prompts.innovations.length, 'characters');
+                console.log('- Pricing:', prompts.pricing.length, 'characters');
+                console.log('- Curriculum:', prompts.curriculum.length, 'characters');
+                console.log('- New Program:', prompts.newprogram.length, 'characters');
                 
                 loadTableauAPI();
             })
@@ -492,12 +533,12 @@
             if (tableau && tableau.extensions) {
                 tableau.extensions.initializeAsync()
                     .then(function() {
-                        console.log('🎉 Gemini extension initialized!');
+                        console.log('🎉 AI extension initialized!');
                         
-                        // Auto-generate innovations summary after initialization
+                        // Auto-generate New Program Summary after initialization
                         setTimeout(function() {
-                            console.log('🔄 Auto-generating Curricular Innovations Summary...');
-                            selectPrompt('innovations', document.querySelector('.prompt-btn.active'));
+                            console.log('🔄 Auto-generating New Program Summary...');
+                            selectPrompt('newprogram', document.querySelector('.prompt-btn.active'));
                         }, 200);
                     })
                     .catch(function(error) {
@@ -508,6 +549,25 @@
 
         function selectPrompt(promptType, buttonElement) {
             console.log('📋 Selecting prompt type:', promptType);
+            
+            // Check if Top 20 New Programs is selected (no function yet)
+            if (promptType === 'top20') {
+                console.log('⚠️ Top 20 New Programs function not yet implemented');
+                document.getElementById('summaryText').innerHTML = '<p style="color: #666; text-align: center; margin-top: 50px;">Top 20 New Programs analysis coming soon...</p>';
+                document.getElementById('loadingIndicator').style.display = 'none';
+                
+                // Update button states
+                document.querySelectorAll('.prompt-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                buttonElement.classList.add('active');
+                
+                // Update main title
+                const mainTitle = document.getElementById('mainTitle');
+                mainTitle.textContent = buttonElement.textContent + ' - New Programs';
+                
+                return;
+            }
             
             // Update button states
             document.querySelectorAll('.prompt-btn').forEach(btn => {
@@ -522,9 +582,13 @@
             // Update current prompt type
             currentPromptType = promptType;
             
-            // Update loading message
+            // Update loading message based on API type
             const loadingSpan = document.querySelector('#loadingIndicator span');
-            loadingSpan.textContent = `Generating ${buttonElement.textContent} with Gemini AI...`;
+            if (promptType === 'newprogram') {
+                loadingSpan.textContent = `Generating ${buttonElement.textContent} with Claude AI...`;
+            } else {
+                loadingSpan.textContent = `Generating ${buttonElement.textContent} with Gemini AI...`;
+            }
             
             // Generate summary with selected prompt
             generateSummary();
@@ -535,7 +599,7 @@
                 return;
             }
             
-            if (!geminiPrompts[currentPromptType]) {
+            if (!prompts[currentPromptType]) {
                 showError(`${currentPromptType} prompt not loaded. Please refresh the page and try again.`);
                 return;
             }
@@ -553,13 +617,34 @@
                 }
             }, 45000);
             
-            extractInstitutionData()
+            // Determine which data extraction method to use
+            let dataExtractionPromise;
+            if (currentPromptType === 'newprogram') {
+                // Claude uses metrics data
+                dataExtractionPromise = extractClaudeData();
+            } else {
+                // Gemini uses institution data
+                dataExtractionPromise = extractGeminiData();
+            }
+            
+            dataExtractionPromise
                 .then(function(data) {
-                    console.log('✅ Institution data extracted:', data);
-                    return callGeminiAPI(data);
+                    console.log('✅ Data extracted:', data);
+                    
+                    // Call appropriate API
+                    if (currentPromptType === 'newprogram') {
+                        return callClaudeAPI(data);
+                    } else {
+                        return callGeminiAPI(data);
+                    }
                 })
                 .then(function(summary) {
-                    let htmlSummary = formatSummary(summary);
+                    let htmlSummary;
+                    if (currentPromptType === 'newprogram') {
+                        htmlSummary = formatClaudeSummary(summary);
+                    } else {
+                        htmlSummary = formatGeminiSummary(summary);
+                    }
                     document.getElementById('summaryText').innerHTML = htmlSummary;
                 })
                 .catch(function(error) {
@@ -572,7 +657,8 @@
                 });
         }
 
-        function extractInstitutionData() {
+        // Extract data for Gemini (institutions)
+        function extractGeminiData() {
             return new Promise(function(resolve, reject) {
                 if (typeof tableau === 'undefined' || !tableau.extensions) {
                     reject(new Error('Tableau API not available'));
@@ -581,7 +667,7 @@
 
                 try {
                     const worksheets = tableau.extensions.dashboardContent.dashboard.worksheets;
-                    console.log(`Found ${worksheets.length} worksheets`);
+                    console.log(`Found ${worksheets.length} worksheets for Gemini`);
                     
                     // Look for institution worksheets
                     let secondaryInstitutionsWs = worksheets.find(ws => 
@@ -662,6 +748,167 @@
                     reject(error);
                 }
             });
+        }
+
+        // Extract data for Claude (metrics)
+        function extractClaudeData() {
+            return new Promise(function(resolve, reject) {
+                if (typeof tableau === 'undefined' || !tableau.extensions) {
+                    reject(new Error('Tableau API not available'));
+                    return;
+                }
+
+                try {
+                    const worksheets = tableau.extensions.dashboardContent.dashboard.worksheets;
+                    console.log(`Found ${worksheets.length} worksheets for Claude`);
+                    
+                    // Look for Claude metrics worksheet
+                    let metricsWs = worksheets.find(ws => 
+                        ws.name.toLowerCase().includes('claude') && 
+                        ws.name.toLowerCase().includes('metrics') &&
+                        ws.name.toLowerCase().includes('selected')
+                    );
+                    
+                    // Fallback to any metrics worksheet
+                    if (!metricsWs) {
+                        metricsWs = worksheets.find(ws => 
+                            ws.name.toLowerCase().includes('claude') && 
+                            ws.name.toLowerCase().includes('metrics')
+                        );
+                    }
+                    
+                    // Look for institution worksheets (optional for Claude)
+                    let secondaryInstitutionsWs = worksheets.find(ws => 
+                        ws.name.toLowerCase().includes('claude') && 
+                        ws.name.toLowerCase().includes('secondary') &&
+                        ws.name.toLowerCase().includes('institution')
+                    );
+                    
+                    let tertiaryInstitutionsWs = worksheets.find(ws => 
+                        ws.name.toLowerCase().includes('claude') && 
+                        ws.name.toLowerCase().includes('tertiary') &&
+                        ws.name.toLowerCase().includes('institution')
+                    );
+                    
+                    if (!metricsWs && worksheets.length > 0) {
+                        metricsWs = worksheets[0];
+                    }
+                    
+                    if (!metricsWs) {
+                        reject(new Error('No metrics worksheet found'));
+                        return;
+                    }
+                    
+                    console.log(`Using metrics worksheet: "${metricsWs.name}"`);
+                    
+                    Promise.all([
+                        metricsWs.getSummaryDataAsync(),
+                        secondaryInstitutionsWs ? secondaryInstitutionsWs.getSummaryDataAsync() : Promise.resolve(null),
+                        tertiaryInstitutionsWs ? tertiaryInstitutionsWs.getSummaryDataAsync() : Promise.resolve(null)
+                    ])
+                    .then(function([metricsData, secondaryData, tertiaryData]) {
+                        const processedData = processMetricsData(metricsData);
+                        
+                        if (secondaryData) {
+                            processedData.secondaryInstitutions = extractInstitutionNames(secondaryData);
+                        }
+                        
+                        if (tertiaryData) {
+                            processedData.tertiaryInstitutions = extractInstitutionNames(tertiaryData);
+                        }
+                        
+                        resolve(processedData);
+                    })
+                    .catch(reject);
+                    
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
+        function processMetricsData(dataTable) {
+            const columns = dataTable.columns.map(col => col.fieldName);
+            const rows = dataTable.data;
+            
+            console.log('Metrics columns:', columns);
+            console.log('Metrics rows:', rows.length);
+            
+            const metrics = [];
+            
+            const measureValuesIndex = columns.findIndex(col => 
+                col.toLowerCase().includes('measure values') || 
+                col.toLowerCase().includes('values')
+            );
+            
+            const measureNamesIndex = columns.findIndex(col => 
+                col.toLowerCase().includes('measure names') || 
+                col.toLowerCase().includes('names')
+            );
+            
+            if (measureValuesIndex >= 0 && measureNamesIndex >= 0) {
+                rows.forEach(function(row) {
+                    let measureName = null;
+                    let measureValue = null;
+                    
+                    if (row[measureNamesIndex]) {
+                        const nameCell = row[measureNamesIndex];
+                        measureName = nameCell._formattedValue || nameCell.value || 
+                                    (typeof nameCell === 'object' && nameCell.value !== undefined ? nameCell.value : nameCell);
+                    }
+                    
+                    if (row[measureValuesIndex]) {
+                        const valueCell = row[measureValuesIndex];
+                        measureValue = valueCell._value || valueCell.value || 
+                                     (typeof valueCell === 'object' && valueCell.value !== undefined ? valueCell.value : valueCell);
+                    }
+                    
+                    if (measureName && typeof measureValue === 'number') {
+                        const cleanName = measureName.trim();
+                        
+                        if (!metrics.some(m => m.name === cleanName)) {
+                            console.log(`✅ Found measure: ${cleanName} = ${measureValue}`);
+                            metrics.push({
+                                name: cleanName,
+                                value: measureValue
+                            });
+                        }
+                    }
+                });
+            }
+            
+            // Extract program and job information
+            let currentProgram = '11.0701 | Computer Science | Bachelor\'s';
+            let currentJob = 'Software Developers';
+            
+            if (rows.length > 0) {
+                const firstRow = rows[0];
+                
+                if (firstRow[0]) {
+                    const cipValue = (typeof firstRow[0] === 'object' && firstRow[0].value !== undefined) 
+                        ? firstRow[0].value : firstRow[0];
+                    if (cipValue && cipValue !== '%null%') {
+                        currentProgram = cipValue;
+                    }
+                }
+                
+                if (firstRow[1]) {
+                    const jobValue = (typeof firstRow[1] === 'object' && firstRow[1].value !== undefined) 
+                        ? firstRow[1].value : firstRow[1];
+                    if (jobValue && jobValue !== '%null%') {
+                        currentJob = jobValue;
+                    }
+                }
+            }
+            
+            return {
+                program: currentProgram,
+                jobTarget: currentJob,
+                metrics: metrics,
+                dataSource: 'Claude Metrics Analysis',
+                recordCount: rows.length,
+                timestamp: new Date().toLocaleString()
+            };
         }
 
         function extractProgramInfo(dataTable) {
@@ -814,7 +1061,7 @@
             // Remove duplicates and limit to 20
             institutionList = [...new Set(institutionList)].slice(0, 20);
             
-            const prompt = geminiPrompts[currentPromptType]
+            const prompt = prompts[currentPromptType]
                 .replace(/\[Program\]/g, data.program)
                 .replace(/\[List of institutions\]/g, institutionList.join(', '))
                 .replace(/\[Selected Institution State\]/g, data.selectedState || 'Not specified');
@@ -828,19 +1075,56 @@
                 body: JSON.stringify({ prompt: prompt })
             })
             .then(function(response) {
-                if (!response.ok) throw new Error('API error: ' + response.status);
+                if (!response.ok) throw new Error('Gemini API error: ' + response.status);
                 return response.json();
             })
             .then(function(result) {
                 if (result && result.success) {
                     return result.content;
                 } else {
-                    throw new Error(result?.error || 'API returned error');
+                    throw new Error(result?.error || 'Gemini API returned error');
                 }
             });
         }
 
-        function formatSummary(summary) {
+        function callClaudeAPI(data) {
+            let institutionText = '';
+            if (data.secondaryInstitutions && data.secondaryInstitutions.length > 0) {
+                institutionText += `\n\nTOP INSTITUTIONS (SECONDARY MARKET):\n${data.secondaryInstitutions.slice(0, 10).map((inst, i) => `${i + 1}. ${inst}`).join('\n')}`;
+            }
+            if (data.tertiaryInstitutions && data.tertiaryInstitutions.length > 0) {
+                institutionText += `\n\nTOP INSTITUTIONS (TERTIARY MARKET):\n${data.tertiaryInstitutions.slice(0, 10).map((inst, i) => `${i + 1}. ${inst}`).join('\n')}`;
+            }
+            
+            const prompt = prompts.newprogram
+                .replace(/\{\{PROGRAM\}\}/g, data.program)
+                .replace(/\{\{JOB_TARGET\}\}/g, data.jobTarget)
+                .replace(/\{\{TIMESTAMP\}\}/g, data.timestamp)
+                .replace(/\{\{DATA_SOURCE\}\}/g, data.dataSource)
+                .replace(/\{\{METRICS\}\}/g, data.metrics.map(m => `• ${m.name}: ${m.value}`).join('\n'))
+                .replace(/\{\{INSTITUTIONS\}\}/g, institutionText);
+            
+            console.log('🚀 Sending prompt to Claude API...');
+
+            return fetch(CLAUDE_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: prompt })
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Claude API error: ' + response.status);
+                return response.json();
+            })
+            .then(function(result) {
+                if (result && result.success) {
+                    return result.content;
+                } else {
+                    throw new Error(result?.error || 'Claude API returned error');
+                }
+            });
+        }
+
+        function formatGeminiSummary(summary) {
             let htmlSummary = summary
                 .replace(/^## (.*$)/gm, '<h2>$1</h2>')
                 .replace(/^### (.*$)/gm, '<h3>$1</h3>')
@@ -862,6 +1146,83 @@
             htmlSummary = lines.join('<br>');
             
             return htmlSummary;
+        }
+
+        function formatClaudeSummary(summary) {
+            let htmlSummary = summary
+                .replace(/^(?:\*\*)?([A-Z][^:.\n]+(?::|$))(?:\*\*)?$/gm, '<h2>$1</h2>')
+                .replace(/^(Why we like it|Potential concerns|Overall assessment)[:]*$/gmi, '<h2>$1</h2>')
+                .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                .replace(/^\*\*(.*?)\*\*$/gm, '<h2>$1</h2>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\n/g, '<br>')
+                .replace(/<h2>([^<]+):<\/h2>/g, '<h2>$1</h2>');
+            
+            let lines = htmlSummary.split('<br>');
+            
+            lines = lines.filter(line => {
+                const cleanLine = line.replace(/<[^>]*>/g, '').trim().toUpperCase();
+                return !(cleanLine === 'MARKET OUTLOOK SUMMARY' || 
+                        cleanLine === 'MARKET OUTLOOK' ||
+                        cleanLine === 'SUMMARY' ||
+                        cleanLine === '');
+            });
+            
+            if (lines.length > 0 && lines[0] && !lines[0].includes('<h2>')) {
+                lines[0] = `<span style="color: #1AB2D7 !important; font-size: 18px; display: block;">${lines[0]}</span>`;
+            }
+            
+            htmlSummary = lines.join('<br>');
+            
+            if (!htmlSummary.includes('<p>')) {
+                htmlSummary = '<p>' + htmlSummary + '</p>';
+            }
+            
+            // Handle metrics table if present
+            if (htmlSummary.includes('Category | Score')) {
+                htmlSummary = convertMetricsTable(htmlSummary);
+            }
+            
+            return htmlSummary;
+        }
+
+        function convertMetricsTable(htmlSummary) {
+            return htmlSummary.replace(
+                /Category \| Score[\s\S]*?Total Score[^|]*\|[^0-9]*([\d.]+)/,
+                function(match) {
+                    const lines = match.split(/\n|<br>/);
+                    let tableHTML = '<table><thead><tr><th>Category</th><th>Score</th></tr></thead><tbody>';
+                    
+                    lines.forEach(line => {
+                        if (line.includes('Category | Score') || line.includes('---') || !line.trim()) {
+                            return;
+                        }
+                        
+                        if (line.includes('Total Score')) {
+                            const totalMatch = line.match(/Total Score[^|]*\|[^0-9]*([\d.]+)/);
+                            if (totalMatch) {
+                                const formattedTotalScore = parseFloat(totalMatch[1]).toFixed(1);
+                                tableHTML += `<tr><td><strong>Total Score (Max 10)</strong></td><td><strong>${formattedTotalScore}</strong></td></tr>`;
+                            }
+                        } else if (line.includes('|')) {
+                            const parts = line.split('|');
+                            if (parts.length >= 2) {
+                                const category = parts[0].trim();
+                                const scoreText = parts[1].trim();
+                                const scoreMatch = scoreText.match(/([\d.]+)/);
+                                if (scoreMatch) {
+                                    const score = parseFloat(scoreMatch[1]).toFixed(1);
+                                    tableHTML += `<tr><td>${category}</td><td>${score}</td></tr>`;
+                                }
+                            }
+                        }
+                    });
+                    
+                    tableHTML += '</tbody></table>';
+                    return tableHTML;
+                }
+            );
         }
 
         function showError(message) {
