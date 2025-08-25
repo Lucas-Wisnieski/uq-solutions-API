@@ -616,9 +616,9 @@
                 if (isProcessing) {
                     isProcessing = false;
                     document.getElementById('loadingIndicator').style.display = 'none';
-                    showError('Process timed out after 45 seconds');
+                    showError('Process timed out after 3 minutes. Please try again or select fewer institutions.');
                 }
-            }, 45000);
+            }, 180000);
             
             // Determine which data extraction method to use
             let dataExtractionPromise;
