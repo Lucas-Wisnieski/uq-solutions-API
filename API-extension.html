@@ -531,7 +531,15 @@
 
         function initializeExtension() {
             if (tableau && tableau.extensions) {
-                tableau.extensions.initializeAsync()
+                // Handle context menu configuration
+                const contextMenuCallbacks = {
+                    'configure': function() {
+                        console.log('Configure menu clicked');
+                        // Add any configuration logic here if needed
+                    }
+                };
+                
+                tableau.extensions.initializeAsync({'configure': contextMenuCallbacks['configure']})
                     .then(function() {
                         console.log('🎉 AI extension initialized!');
                         
