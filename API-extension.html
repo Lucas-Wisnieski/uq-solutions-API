@@ -297,6 +297,7 @@
 
         // Global state
         let isProcessing = false;
+        let isInitialized = false;
         let prompts = {
             innovations: null,
             pricing: null,
@@ -542,6 +543,7 @@
                 tableau.extensions.initializeAsync({'configure': contextMenuCallbacks['configure']})
                     .then(function() {
                         console.log('🎉 AI extension initialized!');
+                        isInitialized = true;
                         
                         // Auto-generate New Program Summary after initialization
                         setTimeout(function() {
@@ -551,7 +553,11 @@
                     })
                     .catch(function(error) {
                         console.error('❌ Init failed:', error);
+                        isInitialized = false;
                     });
+            } else {
+                console.log('⚠️ Tableau Extensions API not available');
+                isInitialized = false;
             }
         }
 
@@ -604,6 +610,13 @@
 
         function generateSummary() {
             if (isProcessing) {
+                return;
+            }
+            
+            // Check if Tableau extension is initialized
+            if (!isInitialized || !tableau || !tableau.extensions || !tableau.extensions.dashboardContent) {
+                console.error('⚠️ Tableau extension not initialized yet');
+                showError('Extension is still initializing. Please wait a moment and try again.');
                 return;
             }
             
