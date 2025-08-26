@@ -79,6 +79,18 @@
             border-color: #1976d2;
         }
         
+        /* Special styling for Export RTF button */
+        .prompt-btn.export-mode {
+            background: #ff6b35;
+            color: white;
+            border-color: #ff6b35;
+        }
+        
+        .prompt-btn.export-mode:hover {
+            background: #ff8659;
+            border-color: #ff8659;
+        }
+        
         .summary-container {
             border-top: 1px solid #dee2e6;
             margin-top: 0;
@@ -148,8 +160,12 @@
             font-size: 32px;
             font-weight: bold;
             color: #03304D;
-            margin: 15px 0 15px 0;
+            margin: 40px 0 8px 0;  /* Increased top margin, reduced bottom */
             line-height: 1.3;
+        }
+        
+        .summary-text h2:first-child {
+            margin-top: 15px;  /* Less space for the first heading */
         }
         
         .summary-text h3 {
@@ -157,7 +173,7 @@
             font-size: 28px;
             font-weight: bold;
             color: #03304D;
-            margin: 25px 0 12px 0;
+            margin: 35px 0 8px 0;  /* Increased top margin, reduced bottom */
             line-height: 1.3;
         }
         
@@ -167,7 +183,7 @@
         }
         
         .summary-text ul {
-            margin: 15px 0;
+            margin: 8px 0 35px 0;  /* Reduced top margin, increased bottom */
             padding-left: 25px;
         }
         
@@ -175,6 +191,10 @@
             margin-bottom: 14px;
             line-height: 1.8;
             font-size: 17px;
+        }
+        
+        .summary-text li:last-child {
+            margin-bottom: 0;  /* No margin on last bullet point */
         }
         
         /* Make subtitle/description text bold and larger */
@@ -253,7 +273,7 @@
             
             <div class="prompt-buttons">
                 <button class="prompt-btn active" onclick="selectPrompt('newprogram', this)">New Program Summary</button>
-                <button class="prompt-btn" onclick="selectPrompt('top20', this)">Top 20 New Programs</button>
+                <button class="prompt-btn" id="top20Button" onclick="handleTop20Click(this)">Top 20 New Programs</button>
                 <button class="prompt-btn" onclick="selectPrompt('innovations', this)">Curricular Innovations</button>
                 <button class="prompt-btn" onclick="selectPrompt('curriculum', this)">Sample Curriculum</button>
                 <button class="prompt-btn" onclick="selectPrompt('pricing', this)">Pricing</button>
@@ -307,6 +327,58 @@
         };
         let currentPromptType = 'newprogram';
         let lastTriggerCheck = 0;
+        let isExportMode = false; // Track if button is in Export RTF mode
+
+        // Handle Top 20 / Export RTF button clicks
+        function handleTop20Click(buttonElement) {
+            const button = document.getElementById('top20Button');
+            
+            if (isExportMode) {
+                // Button is "Export RTF" - run export function
+                exportToRTF();
+                // Keep the button as "Export RTF" after clicking
+            } else {
+                // Button is "Top 20 New Programs" - change to Export RTF
+                button.textContent = 'Export RTF';
+                button.classList.add('export-mode');
+                isExportMode = true;
+                
+                // Run the original Top 20 function
+                selectPrompt('top20', buttonElement);
+            }
+        }
+        
+        // Export to RTF function (placeholder)
+        function exportToRTF() {
+            console.log('📄 Export RTF function triggered');
+            
+            // For now, just display a message
+            document.getElementById('summaryText').innerHTML = `
+                <div style="text-align: center; padding: 50px;">
+                    <h2 style="color: #ff6b35;">Export to RTF</h2>
+                    <p style="color: #666; margin-top: 20px;">
+                        RTF export functionality will be implemented here.<br>
+                        This function will export the current analysis to an RTF file.
+                    </p>
+                    <p style="color: #999; margin-top: 30px; font-size: 14px;">
+                        Click any other button to return to normal mode.
+                    </p>
+                </div>
+            `;
+            
+            // Hide loading indicator if it's showing
+            document.getElementById('loadingIndicator').style.display = 'none';
+        }
+        
+        // Reset Top 20 button to original state
+        function resetTop20Button() {
+            const button = document.getElementById('top20Button');
+            if (isExportMode) {
+                button.textContent = 'Top 20 New Programs';
+                button.classList.remove('export-mode');
+                isExportMode = false;
+            }
+        }
 
         // Check for triggers from external sources
         function checkForTriggers() {
@@ -564,6 +636,11 @@
         function selectPrompt(promptType, buttonElement) {
             console.log('📋 Selecting prompt type:', promptType);
             
+            // Reset Top 20 button if clicking any other button
+            if (promptType !== 'top20') {
+                resetTop20Button();
+            }
+            
             // Check if Top 20 New Programs is selected (no function yet)
             if (promptType === 'top20') {
                 console.log('⚠️ Top 20 New Programs function not yet implemented');
@@ -578,7 +655,7 @@
                 
                 // Update main title
                 const mainTitle = document.getElementById('mainTitle');
-                mainTitle.textContent = buttonElement.textContent + ' - New Programs';
+                mainTitle.textContent = 'Top 20 New Programs - New Programs';
                 
                 return;
             }
