@@ -269,7 +269,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1 class="title" id="mainTitle">AI Summaries - New Programs</h1>
+            <h1 class="title" id="mainTitle">New Program Summary</h1>
             
             <div class="prompt-buttons">
                 <button class="prompt-btn active" onclick="selectPrompt('newprogram', this)">New Program Summary</button>
@@ -655,7 +655,7 @@
                 
                 // Update main title
                 const mainTitle = document.getElementById('mainTitle');
-                mainTitle.textContent = 'Top 20 New Programs - New Programs';
+                mainTitle.textContent = 'Top 20 New Programs';
                 
                 return;
             }
@@ -668,7 +668,7 @@
             
             // Update main title with button text
             const mainTitle = document.getElementById('mainTitle');
-            mainTitle.textContent = buttonElement.textContent + ' - New Programs';
+            mainTitle.textContent = buttonElement.textContent;
             
             // Update current prompt type
             currentPromptType = promptType;
