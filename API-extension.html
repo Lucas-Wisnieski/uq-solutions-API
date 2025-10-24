@@ -525,15 +525,40 @@
             }
         });
 
+
         function loadPrompts() {
-            console.log('🔍 Loading all AI prompts from GitHub...');
+            console.log('🔍 Loading all AI prompts via authenticated proxy...');
             
-            // Load all prompts
+            // Build proxy URLs for all prompts
+            const baseProxyUrl = CLAUDE_API_URL.replace('/api/claude', '/api/github-proxy');
+            
+            const proxyUrls = {
+                innovations: `${baseProxyUrl}?url=${encodeURIComponent(PROMPT_URLS.innovations)}`,
+                pricing: `${baseProxyUrl}?url=${encodeURIComponent(PROMPT_URLS.pricing)}`,
+                curriculum: `${baseProxyUrl}?url=${encodeURIComponent(PROMPT_URLS.curriculum)}`,
+                newprogram: `${baseProxyUrl}?url=${encodeURIComponent(PROMPT_URLS.newprogram)}`
+            };
+            
+            console.log('📡 Using authenticated proxy for all prompts');
+            
+            // Load all prompts through the authenticated proxy
             Promise.all([
-                fetch(PROMPT_URLS.innovations).then(r => r.text()),
-                fetch(PROMPT_URLS.pricing).then(r => r.text()),
-                fetch(PROMPT_URLS.curriculum).then(r => r.text()),
-                fetch(PROMPT_URLS.newprogram).then(r => r.text())
+                fetch(proxyUrls.innovations).then(r => {
+                    if (!r.ok) throw new Error(`Failed to load innovations prompt: ${r.status}`);
+                    return r.text();
+                }),
+                fetch(proxyUrls.pricing).then(r => {
+                    if (!r.ok) throw new Error(`Failed to load pricing prompt: ${r.status}`);
+                    return r.text();
+                }),
+                fetch(proxyUrls.curriculum).then(r => {
+                    if (!r.ok) throw new Error(`Failed to load curriculum prompt: ${r.status}`);
+                    return r.text();
+                }),
+                fetch(proxyUrls.newprogram).then(r => {
+                    if (!r.ok) throw new Error(`Failed to load new program prompt: ${r.status}`);
+                    return r.text();
+                })
             ])
             .then(function([innovationsText, pricingText, curriculumText, newprogramText]) {
                 prompts.innovations = innovationsText.trim();
@@ -541,11 +566,12 @@
                 prompts.curriculum = curriculumText.trim();
                 prompts.newprogram = newprogramText.trim();
                 
-                console.log('✅ All prompts loaded:');
+                console.log('✅ All prompts loaded via authenticated proxy:');
                 console.log('- Innovations:', prompts.innovations.length, 'characters');
                 console.log('- Pricing:', prompts.pricing.length, 'characters');
                 console.log('- Curriculum:', prompts.curriculum.length, 'characters');
                 console.log('- New Program:', prompts.newprogram.length, 'characters');
+                console.log('✅ No more GitHub rate limits!');
                 
                 loadTableauAPI();
             })
