@@ -49,7 +49,7 @@ Format the response in a clear, professional manner suitable for institutional d
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
     
     // FIX: Use a current and valid model name for the v1beta API
-    const modelName = 'gemini-2.0-flash-exp';
+    const modelName = 'gemini-1.5-pro';
     const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
 
     if (!GEMINI_API_KEY) {
