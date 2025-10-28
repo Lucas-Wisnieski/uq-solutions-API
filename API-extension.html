@@ -1184,7 +1184,10 @@
             return institutions;
         }
 
-        function callGeminiAPI(data) {
+        function callGeminiAPI(data, retryCount = 0) {
+            const MAX_RETRIES = 3;
+            const RETRY_DELAY = 2000; // 2 seconds
+            
             let institutionList = [];
             
             if (data.secondaryInstitutions) {
@@ -1194,8 +1197,19 @@
                 institutionList = institutionList.concat(data.tertiaryInstitutions);
             }
             
-            // Remove duplicates and limit to 20
-            institutionList = [...new Set(institutionList)].slice(0, 20);
+            // Remove duplicates first
+            institutionList = [...new Set(institutionList)];
+            
+            // Apply different limits based on prompt type
+            let institutionLimit = 20; // Default for innovations
+            
+            if (currentPromptType === 'curriculum') {
+                institutionLimit = 3; // Reduce to 3 for curriculum
+            } else if (currentPromptType === 'pricing') {
+                institutionLimit = 10; // Moderate limit for pricing
+            }
+            
+            institutionList = institutionList.slice(0, institutionLimit);
             
             const prompt = prompts[currentPromptType]
                 .replace(/\[Program\]/g, data.program)
@@ -1204,25 +1218,79 @@
             
             console.log('🚀 Sending', currentPromptType, 'prompt to Gemini API...');
             console.log('📋 Analyzing institutions:', institutionList.length);
-
+            console.log('📊 Prompt length:', prompt.length, 'characters');
+            
+            if (retryCount > 0) {
+                console.log(`🔄 Retry attempt ${retryCount}/${MAX_RETRIES}`);
+            }
+        
             return fetch(GEMINI_API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt: prompt })
             })
             .then(function(response) {
-                if (!response.ok) throw new Error('Gemini API error: ' + response.status);
+                console.log('📡 Gemini API response status:', response.status);
+                
+                if (!response.ok) {
+                    return response.text().then(function(text) {
+                        console.error('❌ Gemini API Error Response:', text);
+                        
+                        // Check if it's a 503 error (overloaded)
+                        let is503Error = false;
+                        try {
+                            const errorData = JSON.parse(text);
+                            if (errorData.error && (errorData.error.code === 503 || errorData.error.status === 'UNAVAILABLE')) {
+                                is503Error = true;
+                            }
+                        } catch (e) {
+                            // Not JSON, check status code
+                            is503Error = response.status === 503;
+                        }
+                        
+                        // Retry on 503 errors
+                        if (is503Error && retryCount < MAX_RETRIES) {
+                            console.log(`⏳ Gemini overloaded. Retrying in ${RETRY_DELAY/1000} seconds...`);
+                            return new Promise(function(resolve) {
+                                setTimeout(function() {
+                                    resolve(callGeminiAPI(data, retryCount + 1));
+                                }, RETRY_DELAY);
+                            });
+                        }
+                        
+                        // Build error message
+                        let errorMessage = `Gemini API error: ${response.status}`;
+                        try {
+                            const errorData = JSON.parse(text);
+                            if (errorData.error && errorData.error.message) {
+                                errorMessage = errorData.error.message;
+                            }
+                        } catch (e) {
+                            errorMessage += ` - ${text.substring(0, 200)}`;
+                        }
+                        
+                        throw new Error(errorMessage);
+                    });
+                }
                 return response.json();
             })
             .then(function(result) {
+                console.log('✅ Gemini API response received');
                 if (result && result.success) {
                     return result.content;
                 } else {
                     throw new Error(result?.error || 'Gemini API returned error');
                 }
+            })
+            .catch(function(error) {
+                // Only log final error, not retry errors
+                if (retryCount === MAX_RETRIES || !error.message.includes('overloaded')) {
+                    console.error('❌ Final Gemini error:', error);
+                }
+                throw error;
             });
         }
-
+        
         function callClaudeAPI(data) {
             let institutionText = '';
             if (data.secondaryInstitutions && data.secondaryInstitutions.length > 0) {
